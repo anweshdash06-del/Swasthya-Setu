@@ -12,6 +12,10 @@ import { buildSeedPatients } from '../utils/sampleData'
 const AppContext = createContext(null)
 const LANG_KEY = 'swasthyasetu_lang_v1'
 
+// Only these emails are allowed to register/sign in as a healthcare worker.
+// Add more entries here (comma-separated) if other staff need access.
+export const ALLOWED_WORKER_EMAILS = ['worker@swasthyasetu.app']
+
 export function AppProvider({ children }) {
   // ---- Cases: live-synced from Firestore (shared across every device) ----
   const [cases, setCases] = useState([])
