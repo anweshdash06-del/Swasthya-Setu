@@ -59,13 +59,17 @@ export default function PatientDashboard() {
         ) : (
           <div className="space-y-3">
             {myCases.map((c) => (
-              <div key={c.id} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4">
+              <button
+                key={c.id}
+                onClick={() => navigate(`/patient/report/${c.id}`)}
+                className="w-full text-left bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-4 hover:border-brand-300 hover:shadow-sm transition"
+              >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate">{c.triageNote.chiefComplaint}</p>
                   <p className="text-xs text-slate-400 mt-0.5">{new Date(c.createdAt).toLocaleString()} &bull; Status: {c.status}</p>
                 </div>
                 <UrgencyBadge category={c.urgency.category} size="sm" />
-              </div>
+              </button>
             ))}
           </div>
         )}

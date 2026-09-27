@@ -14,6 +14,7 @@ import NewEntry from './pages/patient/NewEntry'
 import UploadReport from './pages/patient/UploadReport'
 import ReviewSubmit from './pages/patient/ReviewSubmit'
 import Timeline from './pages/patient/Timeline'
+import PatientReport from './pages/patient/PatientReport'
 
 import WorkerLogin from './pages/worker/WorkerLogin'
 import WorkerDashboard from './pages/worker/WorkerDashboard'
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/patient/upload-report/:id" element={<RequirePatient><UploadReport /></RequirePatient>} />
           <Route path="/patient/review/:id" element={<RequirePatient><ReviewSubmit /></RequirePatient>} />
           <Route path="/patient/timeline" element={<RequirePatient><Timeline /></RequirePatient>} />
+          <Route path="/patient/report/:id" element={<RequirePatient><PatientReport /></RequirePatient>} />
 
           <Route path="/worker/login" element={<WorkerLogin />} />
           <Route path="/worker/dashboard" element={<RequireWorker><WorkerDashboard /></RequireWorker>} />

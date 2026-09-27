@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ChevronDown, ChevronUp, FileText, FileSearch } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import UrgencyBadge from '../../components/UrgencyBadge'
 import { t } from '../../i18n/translations'
 
 export default function Timeline() {
   const { auth, cases, language } = useApp()
+  const navigate = useNavigate()
   const [openId, setOpenId] = useState(null)
   const myCases = cases
     .filter((c) => c.patient.phone === auth.patient?.phone)
@@ -59,6 +61,12 @@ export default function Timeline() {
                           {c.reviewNotes && <> — "{c.reviewNotes}"</>}
                         </p>
                       )}
+                      <button
+                        onClick={() => navigate(`/patient/report/${c.id}`)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 px-3 py-2 rounded-lg transition"
+                      >
+                        <FileSearch className="w-3.5 h-3.5" /> View full report
+                      </button>
                     </div>
                   )}
                 </div>
