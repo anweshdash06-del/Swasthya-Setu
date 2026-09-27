@@ -1,0 +1,40 @@
+// -----------------------------------------------------------------------
+// Reference Firestore Security Rules for SwasthyaSetu
+// -----------------------------------------------------------------------
+// The Firebase project is currently in "test mode" (open read/write for
+// 30 days) so the demo works immediately with zero configuration. Before
+// any real deployment, publish these rules instead:
+// Firebase Console → Firestore Database → Rules → paste this → Publish
+// -----------------------------------------------------------------------
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each signed-in user can only read/write their own account profile.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Triage cases:
+    // - Any signed-in patient can create a case for themselves.
+    // - Any signed-in healthcare worker can read/update any case
+    //   (needed for the shared queue + review workflow).
+    // - A patient can only read their own submitted cases.
+    match /cases/{caseId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && (
+        isWorker() ||
+        resource.data.patient.uid == request.auth.uid
+      );
+      allow update: if request.auth != null && isWorker();
+      allow delete: if false; // cases are never hard-deleted, only status-updated
+    }
+
+    function isWorker() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'worker';
+    }
+  }
+}
