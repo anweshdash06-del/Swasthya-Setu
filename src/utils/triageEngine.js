@@ -275,8 +275,33 @@ export function scanReportText(ocrText) {
   return flags
 }
 
+/**
+ * Evaluate a vitals reading (from a real or simulated connected device) for
+ * red-flag thresholds, in the exact same {reason, weight, redFlag} shape as
+ * scanReportText() — this is what makes "Connecting Machines" (device data)
+ * a first-class input to the same urgency engine as patient-typed text and
+ * uploaded reports, instead of a separate bolted-on system.
+ */
+export function scanVitals(vitals) {
+  if (!vitals) return []
+  const flags = []
+  if (vitals.spo2 !== undefined && vitals.spo2 !== null && vitals.spo2 < 92) {
+    flags.push({ reason: `Low oxygen saturation from connected device (SpO2 ${vitals.spo2}%)`, weight: 9, redFlag: true })
+  }
+  if (vitals.heartRate !== undefined && vitals.heartRate !== null && (vitals.heartRate >= 130 || vitals.heartRate <= 40)) {
+    flags.push({ reason: `Abnormal heart rate from connected device (${vitals.heartRate} bpm)`, weight: 7, redFlag: true })
+  }
+  if (vitals.tempF !== undefined && vitals.tempF !== null && vitals.tempF >= 103) {
+    flags.push({ reason: `High temperature from connected device (${vitals.tempF}°F)`, weight: 6, redFlag: false })
+  }
+  if (vitals.systolic !== undefined && vitals.systolic !== null && (vitals.systolic >= 180 || vitals.diastolic >= 120)) {
+    flags.push({ reason: `Very high blood pressure from connected device (${vitals.systolic}/${vitals.diastolic})`, weight: 8, redFlag: true })
+  }
+  return flags
+}
+
 /** Build the structured, reviewer-facing triage note. */
-export function buildTriageNote({ patient, rawText, entities, missingInfo, urgency, reportSummaries }) {
+export function buildTriageNote({ patient, rawText, entities, missingInfo, urgency, reportSummaries, vitals }) {
   const symptomList = entities.symptoms.length
     ? entities.symptoms.map((s) => s.label).join(', ')
     : 'No specific symptoms auto-detected — manual review required'
@@ -293,6 +318,7 @@ export function buildTriageNote({ patient, rawText, entities, missingInfo, urgen
     urgencyCategory: urgency.category,
     urgencyReasons: urgency.reasons,
     recommendedAction: recommendedActionFor(urgency.category),
+    vitalsSnapshot: vitals || null,
     generatedAt: new Date().toISOString(),
     aiNotice: 'This note was organized by an AI-assistance tool. It is NOT a diagnosis. A qualified healthcare professional must review, verify, and make all clinical decisions.',
   }
@@ -311,8 +337,13 @@ function recommendedActionFor(category) {
   }
 }
 
-/** End-to-end convenience function used by the patient-entry flow. */
-export function runTriagePipeline({ patient, rawText, reportTexts = [] }) {
+/**
+ * End-to-end convenience function used by the patient-entry flow.
+ * `vitals`, if provided (e.g. from a connected/simulated IoT device —
+ * see VitalsDeviceSimulator), is scored alongside typed symptoms and OCR'd
+ * report text, so urgency reflects ALL available evidence, not just text.
+ */
+export function runTriagePipeline({ patient, rawText, reportTexts = [], vitals = null }) {
   const entities = extractEntities(rawText)
   const missingInfo = detectMissingInfo(entities, patient)
 
@@ -323,8 +354,11 @@ export function runTriagePipeline({ patient, rawText, reportTexts = [] }) {
     return { fileName: rt.fileName, excerpt: (rt.text || '').slice(0, 400), flagCount: flags.length }
   })
 
+  const vitalFlags = scanVitals(vitals)
+  ocrFlags = ocrFlags.concat(vitalFlags)
+
   const urgency = scoreUrgency(entities, ocrFlags)
-  const triageNote = buildTriageNote({ patient, rawText, entities, missingInfo, urgency, reportSummaries })
+  const triageNote = buildTriageNote({ patient, rawText, entities, missingInfo, urgency, reportSummaries, vitals })
 
   return { entities, missingInfo, urgency, triageNote }
 }

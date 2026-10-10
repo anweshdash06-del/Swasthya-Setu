@@ -1,22 +1,28 @@
 import { useState, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { UploadCloud, FileText, X, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import DisclaimerBanner from '../../components/DisclaimerBanner'
+import VitalsDeviceSimulator from '../../components/VitalsDeviceSimulator'
 import { runTriagePipeline } from '../../utils/triageEngine'
 import { t } from '../../i18n/translations'
 
 export default function UploadReport() {
   const { id } = useParams()
-  const { cases, updateCase, language, auth } = useApp()
+  const { cases, updateCase, language, auth, casesLoading } = useApp()
+  const location = useLocation()
   const navigate = useNavigate()
-  const caseData = cases.find((c) => c.id === id)
+  const caseData = cases.find((c) => c.id === id) || location.state?.freshCase
   const [files, setFiles] = useState([])
   const [processing, setProcessing] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [vitals, setVitals] = useState(null)
   const inputRef = useRef(null)
 
   if (!caseData) {
+    if (casesLoading) {
+      return <div className="max-w-2xl mx-auto px-4 py-16 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand-500" /></div>
+    }
     return <div className="max-w-2xl mx-auto px-4 py-16 text-center text-slate-500">Case not found. Please start a new entry.</div>
   }
 
@@ -42,17 +48,22 @@ export default function UploadReport() {
 
   const finalize = (skip = false) => {
     const reportTexts = skip ? [] : files.map((f) => ({ fileName: f.fileName, text: f.text }))
-    const result = runTriagePipeline({ patient: caseData.patient, rawText: caseData.rawText, reportTexts })
+    const result = runTriagePipeline({ patient: caseData.patient, rawText: caseData.rawText, reportTexts, vitals })
+    const auditExtra = []
+    if (!skip && files.length) auditExtra.push(`${files.length} report(s) processed via OCR`)
+    if (vitals) auditExtra.push('Vitals device reading attached (simulated)')
+    if (auditExtra.length === 0) auditExtra.push('Report upload skipped')
+
     updateCase(id, () => ({
       reportFiles: files.map((f) => ({ fileName: f.fileName, text: f.text })),
+      vitals: vitals || null,
       entities: result.entities,
       missingInfo: result.missingInfo,
       urgency: result.urgency,
       triageNote: result.triageNote,
-      auditLog: [...(caseData.auditLog || []), {
-        action: skip ? 'Report upload skipped' : `${files.length} report(s) processed via OCR`,
-        by: auth.patient?.name, at: new Date().toISOString(),
-      }],
+      auditLog: [...(caseData.auditLog || []), ...auditExtra.map((action) => ({
+        action, by: auth.patient?.name, at: new Date().toISOString(),
+      }))],
     }))
     navigate(`/patient/review/${id}`)
   }
@@ -60,7 +71,7 @@ export default function UploadReport() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold text-slate-900">{t(language, 'uploadReport')}</h1>
-      <p className="text-slate-500 text-sm mb-6">Step 2 of 3 — Optional: add a lab report or prescription image</p>
+      <p className="text-slate-500 text-sm mb-6">Step 2 of 3 — Optional: add a lab report/prescription image, and/or connect a vitals device</p>
 
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -105,6 +116,10 @@ export default function UploadReport() {
           ))}
         </div>
       )}
+
+      <div className="mt-6">
+        <VitalsDeviceSimulator vitals={vitals} setVitals={setVitals} onCapture={setVitals} />
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mt-7">
         <button onClick={() => finalize(true)} className="flex-1 border border-slate-300 text-slate-600 font-medium py-3 rounded-xl hover:bg-slate-50">

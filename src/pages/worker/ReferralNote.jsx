@@ -77,6 +77,11 @@ export default function ReferralNote() {
         </div>
 
         <div className="mb-5">
+          <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Patient's own words (exactly as entered)</p>
+          <p className="text-sm text-slate-700 bg-slate-50 rounded-xl p-3 whitespace-pre-wrap">{c.rawText}</p>
+        </div>
+
+        <div className="mb-5">
           <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Chief complaint</p>
           <p className="text-sm text-slate-700">{triageNote.chiefComplaint}</p>
         </div>

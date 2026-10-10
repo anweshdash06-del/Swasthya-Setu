@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, RefreshCcw, BarChart3, Users, ShieldAlert, Clock } from 'lucide-react'
+import { Search, RefreshCcw, BarChart3, Users, ShieldAlert, Clock, Cpu } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import UrgencyBadge from '../../components/UrgencyBadge'
 import { URGENCY_STYLES } from '../../utils/triageEngine'
@@ -106,7 +106,10 @@ export default function WorkerDashboard() {
                   <p className="text-sm font-medium text-slate-800">{c.patient.name}</p>
                   <p className="text-xs text-slate-400">{c.patient.age}y &middot; {c.patient.gender} &middot; {c.id}</p>
                 </div>
-                <div className="col-span-2 sm:col-span-3 text-sm text-slate-600 truncate">{c.triageNote.chiefComplaint}</div>
+                <div className="col-span-2 sm:col-span-3 text-sm text-slate-600 truncate flex items-center gap-1.5">
+                  {c.vitals && <Cpu className="w-3.5 h-3.5 text-teal-500 shrink-0" title="Device vitals attached" />}
+                  {c.triageNote.chiefComplaint}
+                </div>
                 <div className="col-span-1 sm:col-span-2"><UrgencyBadge category={c.urgency.category} size="sm" /></div>
                 <div className="col-span-1 sm:col-span-2 text-xs text-slate-500">{timeAgo(c.createdAt)}</div>
                 <div className="col-span-2 sm:col-span-1">

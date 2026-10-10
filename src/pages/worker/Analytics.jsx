@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, TrendingUp, Users, ShieldAlert, Clock3, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, TrendingUp, Users, ShieldAlert, Clock3, CheckCircle2, Leaf, Route, Fuel, FileX2 } from 'lucide-react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, LineChart, Line, Legend,
 } from 'recharts'
 import { useApp } from '../../context/AppContext'
+import { computeResourceImpact } from '../../utils/resourceImpact'
 
 const URGENCY_COLORS = { Emergency: '#ef4444', Urgent: '#f97316', Priority: '#f59e0b', Routine: '#10b981' }
 
@@ -51,6 +52,8 @@ export default function Analytics() {
     approved: active.filter((c) => c.status === 'approved' || c.status === 'referred').length,
     avgScore: active.length ? Math.round(active.reduce((s, c) => s + c.urgency.score, 0) / active.length) : 0,
   }
+
+  const impact = useMemo(() => computeResourceImpact(cases), [cases])
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -118,7 +121,24 @@ export default function Analytics() {
         </ChartCard>
       </div>
 
-      <div className="mt-6 flex items-center gap-2 text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+      <div className="mt-6 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Leaf className="w-4 h-4 text-emerald-600" />
+          <h3 className="text-sm font-semibold text-emerald-900">Resource & Sustainability Impact</h3>
+        </div>
+        <p className="text-xs text-emerald-700/80 mb-4">
+          Estimated savings from resolving cases locally instead of referring every patient to a larger hospital
+          "just in case" — a direct effect of faster, AI-assisted local triage. Figures are planning-level estimates, not exact measurements.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <ImpactStat icon={Route} value={impact.resolvedLocallyCount} label="Cases resolved locally" />
+          <ImpactStat icon={Route} value={`~${impact.kmAvoided} km`} label="Travel avoided" />
+          <ImpactStat icon={Fuel} value={`~${impact.fuelLitresSaved} L / ${impact.co2KgAvoided} kg`} label="Fuel / CO₂ avoided" />
+          <ImpactStat icon={FileX2} value={impact.paperlessRecords} label="Paperless case records" />
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2 text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
         <Clock3 className="w-3.5 h-3.5 shrink-0" />
         Analytics are computed locally from on-device triage data for this demo session and are never sent to an external server.
       </div>
@@ -136,6 +156,16 @@ function StatCard({ icon: Icon, label, value, color }) {
         <p className="text-xl font-bold text-slate-800 leading-none">{value}</p>
         <p className="text-xs text-slate-400 mt-1">{label}</p>
       </div>
+    </div>
+  )
+}
+
+function ImpactStat({ icon: Icon, value, label }) {
+  return (
+    <div className="bg-white/70 border border-emerald-200/60 rounded-xl p-3 text-center">
+      <Icon className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
+      <p className="text-base font-bold text-emerald-900 leading-tight">{value}</p>
+      <p className="text-[10px] text-emerald-700/70 mt-0.5">{label}</p>
     </div>
   )
 }

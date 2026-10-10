@@ -1,138 +1,147 @@
 import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { Pencil, CheckCircle2, HelpCircle, ListChecks, Send, PartyPopper } from 'lucide-react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { ArrowLeft, Printer, Send, ShieldCheck, Stethoscope, Building2 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import UrgencyBadge from '../../components/UrgencyBadge'
-import DisclaimerBanner from '../../components/DisclaimerBanner'
-import { runTriagePipeline } from '../../utils/triageEngine'
-import { t } from '../../i18n/translations'
 
-export default function ReviewSubmit() {
+export default function ReferralNote() {
   const { id } = useParams()
-  const { cases, updateCase, auth, language } = useApp()
+  const { cases, updateCase, auth } = useApp()
   const navigate = useNavigate()
-  const caseData = cases.find((c) => c.id === id)
-  const [editing, setEditing] = useState(false)
-  const [text, setText] = useState(caseData?.rawText || '')
-  const [submitted, setSubmitted] = useState(false)
+  const c = cases.find((x) => x.id === id)
+  const [referredTo, setReferredTo] = useState('')
+  const [reason, setReason] = useState('')
+  const [marked, setMarked] = useState(false)
 
-  if (!caseData) {
-    return <div className="max-w-2xl mx-auto px-4 py-16 text-center text-slate-500">Case not found.</div>
-  }
+  if (!c) return <div className="max-w-3xl mx-auto px-4 py-16 text-center text-slate-500">Case not found.</div>
 
-  const saveEdit = () => {
-    const reportTexts = (caseData.reportFiles || []).map((f) => ({ fileName: f.fileName, text: f.text }))
-    const result = runTriagePipeline({ patient: caseData.patient, rawText: text, reportTexts })
+  const { triageNote, urgency, entities, patient } = c
+
+  const markReferred = () => {
     updateCase(id, () => ({
-      rawText: text,
-      entities: result.entities,
-      missingInfo: result.missingInfo,
-      urgency: result.urgency,
-      triageNote: result.triageNote,
-      auditLog: [...(caseData.auditLog || []), { action: 'Patient edited symptom description', by: auth.patient?.name, at: new Date().toISOString() }],
+      status: 'referred',
+      referral: { referredTo, reason, preparedBy: `${auth.worker?.name} (${auth.worker?.role})`, at: new Date().toISOString() },
+      auditLog: [...(c.auditLog || []), {
+        action: `Referral note prepared${referredTo ? ` → ${referredTo}` : ''}`,
+        by: auth.worker?.name, at: new Date().toISOString(),
+      }],
     }))
-    setEditing(false)
+    setMarked(true)
   }
-
-  const confirmSubmit = () => {
-    updateCase(id, () => ({
-      status: 'pending',
-      auditLog: [...(caseData.auditLog || []), { action: 'Case submitted to health worker queue', by: auth.patient?.name, at: new Date().toISOString() }],
-    }))
-    setSubmitted(true)
-  }
-
-  if (submitted) {
-    return (
-      <div className="max-w-lg mx-auto px-4 py-20 text-center">
-        <PartyPopper className="w-14 h-14 text-brand-500 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-slate-900">{t(language, 'submitted')}</h1>
-        <p className="text-slate-500 mt-2 text-sm">Case ID: <span className="font-mono">{caseData.id}</span></p>
-        <div className="mt-5 flex justify-center"><UrgencyBadge category={caseData.urgency.category} /></div>
-        <button onClick={() => navigate('/patient/dashboard')} className="mt-8 bg-brand-600 hover:bg-brand-700 text-white font-semibold px-6 py-3 rounded-xl">
-          Back to Dashboard
-        </button>
-      </div>
-    )
-  }
-
-  const { triageNote, urgency, missingInfo, entities } = caseData
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-bold text-slate-900">{t(language, 'reviewTitle')}</h1>
-      <p className="text-slate-500 text-sm mb-6">Step 3 of 3 — {t(language, 'reviewHelp')}</p>
+    <div className="max-w-3xl mx-auto px-4 py-8">
+      <button onClick={() => navigate(`/worker/patient/${id}`)} className="no-print flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4">
+        <ArrowLeft className="w-4 h-4" /> Back to case
+      </button>
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Urgency (non-diagnostic)</span>
+      <div className="no-print bg-white border border-slate-200 rounded-2xl p-5 mb-6 grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">Refer to (facility / specialist)</label>
+          <input value={referredTo} onChange={(e) => setReferredTo(e.target.value)} placeholder="e.g. District Hospital, Cardiology" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-400" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">Reason for referral</label>
+          <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Needs ECG & cardiology evaluation" className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-400" />
+        </div>
+      </div>
+
+      {/* Printable referral note */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-8 print:border-0 print:shadow-none">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-5">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-teal-glow flex items-center justify-center">
+              <Stethoscope className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-800">SwasthyaSetu</p>
+              <p className="text-xs text-slate-400">Referral Note — Case {c.id}</p>
+            </div>
+          </div>
           <UrgencyBadge category={urgency.category} />
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Your description</span>
-            <button onClick={() => setEditing((e) => !e)} className="text-xs text-brand-600 font-medium flex items-center gap-1 hover:underline">
-              <Pencil className="w-3 h-3" /> {t(language, 'editText')}
-            </button>
-          </div>
-          {editing ? (
-            <div>
-              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:border-brand-400" />
-              <button onClick={saveEdit} className="mt-2 text-xs bg-brand-600 text-white px-3 py-1.5 rounded-lg font-medium">Save changes</button>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-700 bg-slate-50 rounded-xl p-3">{caseData.rawText}</p>
-          )}
-        </div>
-
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 flex items-center gap-1.5 mb-2">
-            <ListChecks className="w-3.5 h-3.5" /> Extracted symptoms
-          </span>
-          {entities.symptoms.length === 0 ? (
-            <p className="text-sm text-slate-400 italic">No specific symptoms auto-detected — a health worker will follow up.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {entities.symptoms.map((s) => (
-                <span key={s.key} className={`text-xs font-medium px-2.5 py-1 rounded-full border ${s.redFlag ? 'bg-red-50 text-red-700 border-red-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                  {s.label}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3 mt-3 text-xs">
-            <div className="bg-slate-50 rounded-lg p-2.5"><span className="text-slate-400">Duration: </span><span className="font-medium text-slate-700">{entities.duration || 'Not specified'}</span></div>
-            <div className="bg-slate-50 rounded-lg p-2.5"><span className="text-slate-400">Severity: </span><span className="font-medium text-slate-700">{entities.severity || 'Not specified'}</span></div>
-          </div>
-        </div>
-
-        {missingInfo.questions.length > 0 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <span className="text-xs font-semibold uppercase tracking-wide text-amber-700 flex items-center gap-1.5 mb-2">
-              <HelpCircle className="w-3.5 h-3.5" /> The health worker may ask you
-            </span>
-            <ul className="text-sm text-amber-800 space-y-1 list-disc list-inside">
-              {missingInfo.questions.slice(0, 4).map((q, i) => <li key={i}>{q}</li>)}
-            </ul>
-          </div>
-        )}
-
-        {caseData.reportFiles?.length > 0 && (
+        <div className="grid sm:grid-cols-2 gap-5 mb-5 text-sm">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2 block">Attached reports</span>
-            <ul className="text-sm text-slate-600 space-y-1">
-              {caseData.reportFiles.map((f, i) => <li key={i} className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> {f.fileName}</li>)}
-            </ul>
+            <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Patient</p>
+            <p className="font-medium text-slate-800">{patient.name}</p>
+            <p className="text-slate-500">{patient.age} yrs &middot; {patient.gender}{patient.pregnant ? ' · pregnant' : ''}</p>
+            <p className="text-slate-500">{patient.phone}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Originating facility</p>
+            <p className="font-medium text-slate-800 flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> {patient.facility}</p>
+            <p className="text-slate-500 mt-2 text-xs">Prepared by: {auth.worker?.name} ({auth.worker?.role})</p>
+            <p className="text-slate-500 text-xs">Date: {new Date().toLocaleString()}</p>
+          </div>
+        </div>
+
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Patient's own words (exactly as entered)</p>
+          <p className="text-sm text-slate-700 bg-slate-50 rounded-xl p-3 whitespace-pre-wrap">{c.rawText}</p>
+        </div>
+
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Chief complaint</p>
+          <p className="text-sm text-slate-700">{triageNote.chiefComplaint}</p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-5 mb-5">
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Duration / Severity</p>
+            <p className="text-sm text-slate-700">{entities.duration || 'Not specified'} &middot; {entities.severity || 'Not specified'}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Red flags identified</p>
+            <p className="text-sm text-slate-700">{triageNote.redFlags.length ? triageNote.redFlags.join(', ') : 'None detected'}</p>
+          </div>
+        </div>
+
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Extracted symptoms</p>
+          <p className="text-sm text-slate-700">{entities.symptoms.map((s) => s.label).join(', ') || 'Not auto-detected'}</p>
+        </div>
+
+        {reason && (
+          <div className="mb-5">
+            <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Reason for referral</p>
+            <p className="text-sm text-slate-700">{reason}</p>
           </div>
         )}
+
+        {referredTo && (
+          <div className="mb-5">
+            <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Referred to</p>
+            <p className="text-sm text-slate-700">{referredTo}</p>
+          </div>
+        )}
+
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Reviewer notes</p>
+          <p className="text-sm text-slate-700">{c.reviewNotes || '—'}</p>
+        </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-2 text-xs text-amber-800">
+          <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
+          This referral note was organized with AI assistance and reviewed/approved by a qualified healthcare
+          worker named above. It summarizes patient-reported information only and does not constitute a diagnosis.
+          The receiving facility should conduct its own independent clinical assessment.
+        </div>
       </div>
 
-      <button onClick={confirmSubmit} className="w-full mt-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-brand-600/20">
-        <Send className="w-4 h-4" /> {t(language, 'confirmSubmit')}
-      </button>
-
-      <div className="mt-6"><DisclaimerBanner compact /></div>
+      <div className="no-print flex flex-col sm:flex-row gap-3 mt-6">
+        <button onClick={() => window.print()} className="flex-1 border border-slate-300 text-slate-700 font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-50">
+          <Printer className="w-4 h-4" /> Print / Save as PDF
+        </button>
+        <button
+          onClick={markReferred}
+          disabled={marked}
+          className="flex-1 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2"
+        >
+          <Send className="w-4 h-4" /> {marked ? 'Marked as Referred' : 'Mark Case as Referred'}
+        </button>
+      </div>
+      {marked && <p className="no-print text-center text-sm text-emerald-600 mt-3">Referral recorded in audit trail. <Link to="/worker/dashboard" className="underline">Back to queue</Link></p>}
     </div>
   )
 }

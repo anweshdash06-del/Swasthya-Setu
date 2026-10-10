@@ -48,7 +48,11 @@ export default function NewEntry() {
     setSaving(true)
     try {
       await addCase(newCase)
-      navigate(`/patient/upload-report/${id}`)
+      // Pass the case along via navigation state too — a fast, reliable
+      // fallback in case the cloud database's live sync hasn't echoed this
+      // brand-new case back down to this device yet by the time the next
+      // page renders (it almost always has, but this removes any race).
+      navigate(`/patient/upload-report/${id}`, { state: { freshCase: newCase } })
     } catch (e) {
       setError('Could not save your entry. Please check your internet connection and try again.')
     } finally {

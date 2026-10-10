@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import {
   ArrowLeft, User, Phone, MapPin, ListChecks, HelpCircle, FileText, ShieldAlert,
-  CheckCircle2, Pencil, ClipboardList, History, Send,
+  CheckCircle2, Pencil, ClipboardList, History, Send, Cpu, Heart, Activity, Thermometer, Gauge,
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import UrgencyBadge from '../../components/UrgencyBadge'
-import { runTriagePipeline } from '../../utils/triageEngine'
+import { runTriagePipeline, scanVitals } from '../../utils/triageEngine'
 
 export default function PatientDetail() {
   const { id } = useParams()
@@ -91,7 +91,7 @@ export default function PatientDetail() {
               </div>
             ) : (
               <div>
-                <p className="text-sm text-slate-700 bg-slate-50 rounded-xl p-3">{c.rawText}</p>
+                <p className="text-sm text-slate-700 bg-slate-50 rounded-xl p-3 whitespace-pre-wrap">{c.rawText}</p>
                 <button onClick={() => setEditing(true)} className="text-xs text-brand-600 font-medium flex items-center gap-1 mt-2 hover:underline">
                   <Pencil className="w-3 h-3" /> Edit summary
                 </button>
@@ -116,6 +116,26 @@ export default function PatientDetail() {
               <div className="bg-slate-50 rounded-lg p-2.5"><span className="text-slate-400">Severity: </span><span className="font-medium text-slate-700">{entities.severity || 'Not specified'}</span></div>
             </div>
           </Card>
+
+          {c.vitals && (
+            <Card title="Device vitals (auto-received)" icon={Cpu} tone={scanVitals(c.vitals).length ? 'red' : 'default'}>
+              <p className="text-xs text-slate-400 mb-3">
+                Received automatically from a connected monitoring device — no patient typing involved.
+                Captured {new Date(c.vitals.capturedAt).toLocaleString()}.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                <VitalStat icon={Heart} label="Heart rate" value={`${c.vitals.heartRate} bpm`} bad={c.vitals.heartRate >= 130 || c.vitals.heartRate <= 40} />
+                <VitalStat icon={Activity} label="SpO2" value={`${c.vitals.spo2}%`} bad={c.vitals.spo2 < 92} />
+                <VitalStat icon={Thermometer} label="Temp" value={`${c.vitals.tempF}°F`} bad={c.vitals.tempF >= 103} />
+                <VitalStat icon={Gauge} label="BP" value={`${c.vitals.systolic}/${c.vitals.diastolic}`} bad={c.vitals.systolic >= 180} />
+              </div>
+              {scanVitals(c.vitals).length > 0 && (
+                <ul className="text-xs text-red-700 space-y-1 list-disc list-inside">
+                  {scanVitals(c.vitals).map((f, i) => <li key={i}>{f.reason}</li>)}
+                </ul>
+              )}
+            </Card>
+          )}
 
           {c.reportFiles?.length > 0 && (
             <Card title="Uploaded report (OCR extract)" icon={FileText}>
@@ -185,6 +205,16 @@ export default function PatientDetail() {
           </Card>
         </div>
       </div>
+    </div>
+  )
+}
+
+function VitalStat({ icon: Icon, label, value, bad }) {
+  return (
+    <div className={`rounded-xl p-2.5 border text-center ${bad ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+      <Icon className={`w-3.5 h-3.5 mx-auto mb-1 ${bad ? 'text-red-500' : 'text-slate-400'}`} />
+      <p className={`text-sm font-bold ${bad ? 'text-red-700' : 'text-slate-700'}`}>{value}</p>
+      <p className="text-[10px] text-slate-400">{label}</p>
     </div>
   )
 }

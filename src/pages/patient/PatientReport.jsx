@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Printer, ShieldCheck, Activity, Building2, FileText, HelpCircle } from 'lucide-react'
+import { ArrowLeft, Printer, ShieldCheck, Activity, Building2, FileText, HelpCircle, Cpu, Heart, Thermometer, Gauge } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import UrgencyBadge from '../../components/UrgencyBadge'
+import { scanVitals } from '../../utils/triageEngine'
 
 export default function PatientReport() {
   const { id } = useParams()
@@ -66,7 +67,7 @@ export default function PatientReport() {
 
         <div className="mb-5">
           <p className="text-xs font-semibold uppercase text-slate-400 mb-1">Your description</p>
-          <p className="text-sm text-slate-700 bg-slate-50 rounded-xl p-3">{c.rawText}</p>
+          <p className="text-sm text-slate-700 bg-slate-50 rounded-xl p-3 whitespace-pre-wrap">{c.rawText}</p>
         </div>
 
         <div className="mb-5">
@@ -99,6 +100,18 @@ export default function PatientReport() {
             </div>
           )}
         </div>
+
+        {c.vitals && (
+          <div className="mb-5">
+            <p className="text-xs font-semibold uppercase text-slate-400 mb-1 flex items-center gap-1.5"><Cpu className="w-3.5 h-3.5" /> Vitals from connected device</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+              <PReportVital icon={Heart} label="Heart rate" value={`${c.vitals.heartRate} bpm`} bad={c.vitals.heartRate >= 130 || c.vitals.heartRate <= 40} />
+              <PReportVital icon={Activity} label="SpO2" value={`${c.vitals.spo2}%`} bad={c.vitals.spo2 < 92} />
+              <PReportVital icon={Thermometer} label="Temp" value={`${c.vitals.tempF}°F`} bad={c.vitals.tempF >= 103} />
+              <PReportVital icon={Gauge} label="BP" value={`${c.vitals.systolic}/${c.vitals.diastolic}`} bad={c.vitals.systolic >= 180} />
+            </div>
+          </div>
+        )}
 
         {reportFiles?.length > 0 && (
           <div className="mb-5">
@@ -157,6 +170,16 @@ export default function PatientReport() {
       <button onClick={() => window.print()} className="no-print w-full mt-6 border border-slate-300 text-slate-700 font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-50">
         <Printer className="w-4 h-4" /> Print / Save as PDF
       </button>
+    </div>
+  )
+}
+
+function PReportVital({ icon: Icon, label, value, bad }) {
+  return (
+    <div className={`rounded-xl p-2.5 border text-center ${bad ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+      <Icon className={`w-3.5 h-3.5 mx-auto mb-1 ${bad ? 'text-red-500' : 'text-slate-400'}`} />
+      <p className={`text-sm font-bold ${bad ? 'text-red-700' : 'text-slate-700'}`}>{value}</p>
+      <p className="text-[10px] text-slate-400">{label}</p>
     </div>
   )
 }
