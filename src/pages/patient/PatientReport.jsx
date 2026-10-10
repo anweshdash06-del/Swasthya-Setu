@@ -31,6 +31,14 @@ export default function PatientReport() {
       <button onClick={() => navigate('/patient/timeline')} className="no-print flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to my timeline
       </button>
+      {c.status === 'draft' && (
+        <button
+          onClick={() => navigate(`/patient/review/${c.id}`)}
+          className="no-print mb-4 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition"
+        >
+          Finish and submit this draft
+        </button>
+      )}
 
       {/* Printable / shareable report */}
       <div className="bg-white border border-slate-200 rounded-2xl p-8 print:border-0 print:shadow-none">
