@@ -5,7 +5,7 @@
 > ⚠️ **AI-Assisted Triage — Not AI Diagnosis.** This system organizes patient-reported information and highlights
 > urgency signals so a qualified healthcare worker can review faster. It never diagnoses, prescribes, or replaces
 > a doctor, nurse, or medical officer. Every AI-generated note requires human review and sign-off before any
-> clinical action is taken. All data in this demo is synthetic — **do not enter real patient information.**
+> clinical action is taken. All data in this demo is synthetic.
 
 ---
 
